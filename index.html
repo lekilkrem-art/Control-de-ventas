@@ -1,12 +1,162 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Control de Ventas</title>
+
+<style>
+body{
+font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+background:#f5f7fb;
+margin:0;
+padding:20px;
+}
+
+h1{
+text-align:center;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:15px;
+margin-bottom:15px;
+box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.total{
+font-size:32px;
+font-weight:bold;
+color:#16a34a;
+}
+
+input{
+width:100%;
+padding:12px;
+border:1px solid #ddd;
+border-radius:10px;
+margin-top:10px;
+box-sizing:border-box;
+}
+
+button{
+width:100%;
+padding:14px;
+background:#2563eb;
+color:white;
+border:none;
+border-radius:10px;
+font-size:16px;
+margin-top:10px;
+}
+
+.venta{
+background:white;
+padding:12px;
+border-radius:10px;
+margin-top:10px;
+box-shadow:0 1px 4px rgba(0,0,0,.05);
+}
+</style>
 </head>
+
 <body>
-<h1>Control de Ventas</h1>
-<p>Mi aplicación ya está funcionando.</p>
+
+<h1>📈 Control de Ventas</h1>
+
+<div class="card">
+<h3>Total de Ventas</h3>
+<div class="total" id="total">$0.00</div>
+</div>
+
+<div class="card">
+<h3>Nueva Venta</h3>
+
+<input type="number" id="monto" placeholder="Monto">
+
+<input type="text" id="nota" placeholder="Nota opcional">
+
+<button onclick="guardarVenta()">
+Guardar Venta
+</button>
+</div>
+
+<div class="card">
+<h3>Historial</h3>
+<div id="historial"></div>
+</div>
+
+<script>
+
+let ventas =
+JSON.parse(localStorage.getItem("ventas")) || [];
+
+function actualizar(){
+
+let total = 0;
+
+ventas.forEach(v=>{
+total += Number(v.monto);
+});
+
+document.getElementById("total").innerHTML =
+"$" + total.toFixed(2);
+
+const historial =
+document.getElementById("historial");
+
+historial.innerHTML = "";
+
+ventas.slice().reverse().forEach(v=>{
+
+historial.innerHTML += `
+<div class="venta">
+<b>$${v.monto}</b><br>
+${v.nota || ""}
+<br>
+<small>${v.fecha}</small>
+</div>
+`;
+
+});
+
+}
+
+function guardarVenta(){
+
+const monto =
+document.getElementById("monto").value;
+
+const nota =
+document.getElementById("nota").value;
+
+if(!monto){
+alert("Ingresa un monto");
+return;
+}
+
+ventas.push({
+monto:monto,
+nota:nota,
+fecha:new Date().toLocaleString()
+});
+
+localStorage.setItem(
+"ventas",
+JSON.stringify(ventas)
+);
+
+document.getElementById("monto").value="";
+document.getElementById("nota").value="";
+
+actualizar();
+
+}
+
+actualizar();
+
+</script>
+
 </body>
 </html>
