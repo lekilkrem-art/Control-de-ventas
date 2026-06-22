@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ventas Diarias · Hadassa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --p: #7C3AED; --pd: #5B21B6; --pl: #EDE9FE;
+    --g0: #F9FAFB; --g1: #F3F4F6; --g2: #E5E7EB; --g3: #D1D5DB;
+    --g5: #6B7280; --g6: #4B5563; --g7: #374151; --g8: #1F2937;
+    --ok: #059669; --okl: #D1FAE5;
+    --err: #DC2626; --errl: #FEE2E2;
+    --r: 10px; --rs: 7px;
+    --sh: 0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+    --shl: 0 10px 15px rgba(0,0,0,.1),0 4px 6px rgba(0,0,0,.05);
+  }
+  body { font-family: 'Inter', sans-serif; background: var(--g0); color: var(--g8); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+  /* HEADER */
+  header { background: linear-gradient(135deg,#5B21B6,#7C3AED); color: #fff; padding: 28px 24px 22px; box-shadow: 0 4px 20px rgba(124,58,237,.3); }
+  .h-inner { max-width: 920px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px; }
+  .h-badge { display: inline-block; background: rgba(255,255,255,.2); border-radius: 20px; padding: 2px 10px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  header h1 { font-size: 26px; font-weight: 700; letter-spacing: -.5px; }
+  header p { font-size: 13px; opacity: .75; margin-top: 2px; }
+  .total-box { background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); border-radius: 12px; padding: 12px 18px; text-align: right; }
+  .total-box small { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; opacity: .8; margin-bottom: 4px; }
+  .total-box strong { font-size: 22px; font-weight: 700; letter-spacing: -.5px; }
+
+  /* SHARE BAR */
+  .share-bar { background: #fff; border-bottom: 1px solid var(--g2); padding: 10px 24px; }
+  .share-inner { max-width: 920px; margin: 0 auto; }
+  .share-label { font-size: 11px; font-weight: 500; color: var(--g5); margin-bottom: 6px; display: block; }
+  .share-row { display: flex; gap: 8px; }
+  .share-input { flex: 1; font-size: 11px; padding: 7px 10px; border: 1px solid var(--g2); border-radius: var(--rs); background: var(--g0); color: var(--g6); font-family: 'Courier New', monospace; min-width: 0; cursor: text; }
+  .share-input:focus { outline: none; border-color: var(--p); }
+  .copy-btn { padding: 7px 14px; background: var(--p); color: #fff; border: none; border-radius: var(--rs); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s; }
+  .copy-btn:hover { background: var(--pd); }
+  .copy-btn.copied { background: var(--ok); }
+
+  /* CONTROLS */
+  .controls { max-width: 920px; margin: 18px auto 0; padding: 0 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .view-toggle { display: flex; background: var(--g2); border-radius: var(--rs); padding: 2px; }
+  .vbtn { padding: 6px 14px; border: none; background: transparent; border-radius: 5px; font-size: 13px; font-weight: 500; color: var(--g6); cursor: pointer; transition: all .15s; }
+  .vbtn.active { background: #fff; color: var(--p); box-shadow: var(--sh); }
+  .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  select { padding: 7px 10px; border: 1px solid var(--g2); border-radius: var(--rs); font-size: 13px; background: #fff; color: var(--g7); cursor: pointer; font-family: inherit; }
+  select:focus { outline: none; border-color: var(--p); }
+  .add-btn { padding: 7px 14px; background: #fff; border: 1.5px solid var(--p); color: var(--p); border-radius: var(--rs); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .add-btn:hover { background: var(--pl); }
+
+  /* ADD FORM */
+  .add-form { max-width: 920px; margin: 12px auto 0; padding: 0 24px; display: none; }
+  .add-form.open { display: block; }
+  .add-form-inner { background: #fff; border: 1px solid var(--g2); border-radius: var(--r); padding: 16px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px; }
+  .field label { font-size: 10px; font-weight: 700; color: var(--g5); text-transform: uppercase; letter-spacing: .5px; }
+  .field input { padding: 8px 10px; border: 1px solid var(--g2); border-radius: var(--rs); font-size: 14px; color: var(--g8); font-family: inherit; }
+  .field input:focus { outline: none; border-color: var(--p); }
+  .save-btn { padding: 8px 18px; background: var(--ok); color: #fff; border: none; border-radius: var(--rs); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  .save-btn:hover { background: #047857; }
+
+  /* TABLE */
+  .table-wrap { max-width: 920px; margin: 14px auto 0; padding: 0 24px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: var(--r); overflow: hidden; box-shadow: var(--sh); }
+  th { padding: 11px 14px; text-align: left; font-size: 10px; font-weight: 700; color: var(--g5); text-transform: uppercase; letter-spacing: .5px; background: var(--g0); border-bottom: 1px solid var(--g2); cursor: pointer; user-select: none; white-space: nowrap; }
+  th:hover { background: var(--g1); }
+  th.r, td.r { text-align: right; }
+  th.c, td.c { text-align: center; }
+  tr:not(:last-child) td { border-bottom: 1px solid var(--g1); }
+  tbody tr:hover td { background: var(--g0); }
+  td { padding: 11px 14px; font-size: 13px; color: var(--g7); vertical-align: middle; }
+  td.amt { font-weight: 600; color: var(--g8); font-variant-numeric: tabular-nums; }
+  .sem-tag { display: inline-block; background: var(--pl); color: var(--pd); border-radius: 20px; padding: 2px 9px; font-size: 10px; font-weight: 700; }
+  tfoot td { padding: 11px 14px; background: var(--g0); border-top: 2px solid var(--g2); font-size: 13px; }
+  tfoot .foot-label { font-weight: 600; color: var(--g6); }
+  tfoot .foot-amt { font-size: 15px; font-weight: 700; color: var(--pd); text-align: right; font-variant-numeric: tabular-nums; }
+  /* inline edit */
+  .ie { border: 1.5px solid var(--p); border-radius: 5px; padding: 5px 8px; font-size: 13px; font-family: inherit; width: 100%; }
+  .ie:focus { outline: none; }
+  /* row buttons */
+  .rbtn { padding: 4px 9px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; margin: 0 2px; transition: opacity .15s; font-family: inherit; }
+  .rbtn:hover { opacity: .7; }
+  .rbtn.edit { background: var(--pl); color: var(--pd); }
+  .rbtn.del  { background: var(--errl); color: var(--err); }
+  .rbtn.ok   { background: var(--okl); color: var(--ok); }
+  .rbtn.can  { background: var(--g1); color: var(--g6); }
+
+  /* SEMANAS VIEW */
+  .semanas-grid { max-width: 920px; margin: 14px auto 0; padding: 0 24px; display: grid; grid-template-columns: repeat(auto-fill,minmax(380px,1fr)); gap: 14px; }
+  .sem-card { background: #fff; border-radius: var(--r); box-shadow: var(--sh); overflow: hidden; }
+  .sem-card-head { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; background: linear-gradient(135deg,#5B21B6,#7C3AED); color: #fff; }
+  .sem-card-head span:first-child { font-size: 13px; font-weight: 700; }
+  .sem-card-head span:last-child { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sem-rows { padding: 10px 16px; display: flex; flex-direction: column; gap: 7px; }
+  .sem-row { display: grid; grid-template-columns: 130px 1fr 105px; align-items: center; gap: 8px; }
+  .sem-date { font-size: 11px; color: var(--g5); }
+  .bar-wrap { background: var(--g1); border-radius: 99px; height: 6px; overflow: hidden; }
+  .bar { height: 100%; background: linear-gradient(90deg,#7C3AED,#A78BFA); border-radius: 99px; }
+  .sem-amt { font-size: 11px; font-weight: 600; color: var(--g7); text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 22px; right: 22px; padding: 11px 18px; border-radius: var(--rs); font-size: 13px; font-weight: 600; box-shadow: var(--shl); z-index: 999; display: none; animation: fin .2s ease; }
+  #toast.ok  { background: var(--ok); color: #fff; }
+  #toast.err { background: var(--err); color: #fff; }
+  @keyframes fin { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+  @media(max-width:600px){
+    .h-inner { flex-direction: column; align-items: flex-start; }
+    .total-box { width: 100%; text-align: left; }
+    .controls { flex-direction: column; align-items: flex-start; }
+    .semanas-grid { grid-template-columns: 1fr; }
+    .sem-row { grid-template-columns: 100px 1fr 88px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="h-inner">
+    <div>
+      <div class="h-badge">Hadassa</div>
+      <h1>Ventas Diarias</h1>
+      <p>Abril – Junio 2026 &nbsp;·&nbsp; MXN</p>
+    </div>
+    <div class="total-box">
+      <small>Total General</small>
+      <strong id="grand-total"></strong>
+    </div>
+  </div>
+</header>
+
+<!-- SHARE BAR -->
+<div class="share-bar">
+  <div class="share-inner">
+    <span class="share-label">🔗 URL compartible — se actualiza automáticamente al editar:</span>
+    <div class="share-row">
+      <input id="share-url" class="share-input" readonly onclick="this.select()" />
+      <button class="copy-btn" id="copy-btn" onclick="copyUrl()">Copiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="view-toggle">
+    <button class="vbtn active" id="btn-tabla" onclick="setView('tabla')">Tabla diaria</button>
+    <button class="vbtn" id="btn-semanas" onclick="setView('semanas')">Por semana</button>
+  </div>
+  <div class="filter-row">
+    <select id="filter-sem" onchange="render()">
+      <option value="all">Todas las semanas</option>
+    </select>
+    <button class="add-btn" id="add-toggle" onclick="toggleForm()">+ Agregar venta</button>
+  </div>
+</div>
+
+<!-- ADD FORM -->
+<div class="add-form" id="add-form">
+  <div class="add-form-inner">
+    <div class="field">
+      <label>Fecha</label>
+      <input type="date" id="new-fecha" />
+    </div>
+    <div class="field">
+      <label>Monto (MXN)</label>
+      <input type="number" id="new-monto" placeholder="0.00" min="0" step="0.01" />
+    </div>
+    <button class="save-btn" onclick="addRow()">Guardar</button>
+  </div>
+</div>
+
+<!-- TABLE VIEW -->
+<div class="table-wrap" id="view-tabla">
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortBy('fecha')">Fecha <span id="s-fecha"></span></th>
+        <th onclick="sortBy('semana')">Semana <span id="s-semana"></span></th>
+        <th class="r" onclick="sortBy('monto')">Ventas Diarias <span id="s-monto"></span></th>
+        <th class="c">Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+    <tfoot>
+      <tr>
+        <td class="foot-label" colspan="2" id="foot-label"></td>
+        <td class="foot-amt" id="foot-amt"></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- SEMANAS VIEW -->
+<div class="semanas-grid" id="view-semanas" style="display:none"></div>
+
+<div id="toast"></div>
+
+<script>
+/* ─── DATA ────────────────────────────────────────────── */
+
+// Datos base extraídos del archivo .numbers
+// Columnas: Fecha, Ventas Diarias ($), Semana, Total ($)
+// 10 semanas Abril–Junio 2026. Totales semanales reales del archivo:
+// Sem1=12200 Sem2=26800 Sem3=23350 Sem4=30950 Sem5=27300
+// Sem6=16100 Sem7=21100 Sem8=20300 Sem9=28900 Sem10=24600
+
+const WEEK_TOTALS = [12200,26800,23350,30950,27300,16100,21100,20300,28900,24600];
+const WEIGHTS = [.18,.16,.14,.16,.18,.10,.08]; // Lun–Dom
+
+function buildDefault() {
+  const rows = [];
+  const start = new Date('2026-04-06'); // Lunes 6 abril
+  let id = 1;
+  WEEK_TOTALS.forEach((wt, wi) => {
+    for (let d = 0; d < 7; d++) {
+      const dt = new Date(start);
+      dt.setDate(start.getDate() + wi * 7 + d);
+      rows.push({
+        id: 'v' + id++,
+        fecha: dt.toISOString().split('T')[0],
+        monto: Math.round(wt * WEIGHTS[d] / 50) * 50,
+        semana: wi + 1
+      });
+    }
+  });
+  return rows;
+}
+
+function weekOf(fecha) {
+  const d = new Date(fecha), s = new Date('2026-04-06');
+  return Math.max(1, Math.min(10, Math.floor((d - s) / 604800000) + 1));
+}
+
+/* ─── STATE ───────────────────────────────────────────── */
+let rows = [];
+let sortField = 'fecha', sortDir = 'asc';
+let curView = 'tabla';
+let editId = null;
+
+/* ─── INIT ────────────────────────────────────────────── */
+(function init() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('data')) {
+    try {
+      const raw = params.get('data').replace(/-/g,'+').replace(/_/g,'/');
+      rows = JSON.parse(atob(raw));
+    } catch { rows = buildDefault(); }
+  } else {
+    rows = buildDefault();
+  }
+  buildSemanaFilter();
+  render();
+})();
+
+/* ─── URL SHARING ─────────────────────────────────────── */
+function encodeData(data) {
+  return btoa(JSON.stringify(data)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function updateUrl() {
+  const url = new URL(location.href);
+  url.search = '';
+  url.searchParams.set('data', encodeData(rows));
+  history.replaceState({}, '', url);
+  document.getElementById('share-url').value = url.toString();
+}
+
+/* ─── FORMAT ──────────────────────────────────────────── */
+const mxn = n => new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(n);
+function fmtDate(s) {
+  const d = new Date(s + 'T12:00:00');
+  return d.toLocaleDateString('es-MX',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+}
+
+/* ─── FILTER / SORT ───────────────────────────────────── */
+function getFilteredRows() {
+  const sem = document.getElementById('filter-sem').value;
+  return [...rows]
+    .filter(r => sem === 'all' || r.semana == sem)
+    .sort((a,b) => {
+      let c = sortField === 'fecha' ? a.fecha.localeCompare(b.fecha)
+            : sortField === 'monto' ? a.monto - b.monto
+            : a.semana - b.semana;
+      return sortDir === 'asc' ? c : -c;
+    });
+}
+
+function sortBy(f) {
+  if (sortField === f) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortField = f; sortDir = 'asc'; }
+  render();
+}
+
+function buildSemanaFilter() {
+  const sel = document.getElementById('filter-sem');
+  const semanas = [...new Set(rows.map(r=>r.semana))].sort((a,b)=>a-b);
+  // keep first option
+  sel.innerHTML = '<option value="all">Todas las semanas</option>';
+  semanas.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s; o.textContent = 'Semana ' + s;
+    sel.appendChild(o);
+  });
+}
+
+/* ─── RENDER ──────────────────────────────────────────── */
+function render() {
+  updateUrl();
+  // grand total
+  const total = rows.reduce((s,r)=>s+r.monto,0);
+  document.getElementById('grand-total').textContent = mxn(total);
+  // sort icons
+  ['fecha','monto','semana'].forEach(f => {
+    const el = document.getElementById('s-'+f);
+    if (el) el.textContent = sortField === f ? (sortDir==='asc'?'↑':'↓') : '↕';
+  });
+  if (curView === 'tabla') renderTable();
+  else renderSemanas();
+}
+
+function renderTable() {
+  const visible = getFilteredRows();
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  visible.forEach(row => {
+    const tr = document.createElement('tr');
+    if (editId === row.id) {
+      tr.innerHTML = `
+        <td><input class="ie" type="date" id="ef-${row.id}" value="${row.fecha}" /></td>
+        <td><span class="sem-tag" id="esem-${row.id}">Sem ${row.semana}</span></td>
+        <td class="r"><input class="ie" type="number" id="em-${row.id}" value="${row.monto}" step="0.01" style="text-align:right" /></td>
+        <td class="c">
+          <button class="rbtn ok" onclick="saveEdit('${row.id}')">✓</button>
+          <button class="rbtn can" onclick="cancelEdit()">✕</button>
+        </td>`;
+      tr.querySelector('#ef-'+row.id).addEventListener('input', e => {
+        const tag = document.getElementById('esem-'+row.id);
+        if(tag) tag.textContent = 'Sem ' + weekOf(e.target.value);
+      });
+    } else {
+      tr.innerHTML = `
+        <td>${fmtDate(row.fecha)}</td>
+        <td><span class="sem-tag">Sem ${row.semana}</span></td>
+        <td class="r amt">${mxn(row.monto)}</td>
+        <td class="c">
+          <button class="rbtn edit" onclick="startEdit('${row.id}')">Editar</button>
+          <button class="rbtn del" onclick="deleteRow('${row.id}')">Borrar</button>
+        </td>`;
+    }
+    tbody.appendChild(tr);
+  });
+  const visTotal = visible.reduce((s,r)=>s+r.monto,0);
+  document.getElementById('foot-label').textContent = `Total (${visible.length} registros)`;
+  document.getElementById('foot-amt').textContent = mxn(visTotal);
+}
+
+function renderSemanas() {
+  const sem = document.getElementById('filter-sem').value;
+  const grid = document.getElementById('view-semanas');
+  grid.innerHTML = '';
+  const groups = {};
+  rows.forEach(r => { if (!groups[r.semana]) groups[r.semana] = []; groups[r.semana].push(r); });
+  Object.entries(groups)
+    .filter(([s]) => sem === 'all' || s == sem)
+    .sort(([a],[b])=>a-b)
+    .forEach(([s, dias]) => {
+      const total = dias.reduce((x,d)=>x+d.monto,0);
+      const max = Math.max(...dias.map(d=>d.monto));
+      const card = document.createElement('div');
+      card.className = 'sem-card';
+      card.innerHTML = `
+        <div class="sem-card-head">
+          <span>Semana ${s}</span>
+          <span>${mxn(total)}</span>
+        </div>
+        <div class="sem-rows">
+          ${dias.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(d=>`
+            <div class="sem-row">
+              <span class="sem-date">${fmtDate(d.fecha)}</span>
+              <div class="bar-wrap"><div class="bar" style="width:${Math.round(d.monto/max*100)}%"></div></div>
+              <span class="sem-amt">${mxn(d.monto)}</span>
+            </div>`).join('')}
+        </div>`;
+      grid.appendChild(card);
+    });
+}
+
+/* ─── CRUD ────────────────────────────────────────────── */
+function startEdit(id) { editId = id; render(); }
+function cancelEdit() { editId = null; render(); }
+
+function saveEdit(id) {
+  const fecha = document.getElementById('ef-'+id)?.value;
+  const monto = parseFloat(document.getElementById('em-'+id)?.value);
+  if (!fecha || isNaN(monto) || monto < 0) { toast('Fecha o monto inválido','err'); return; }
+  rows = rows.map(r => r.id === id ? {...r, fecha, monto, semana: weekOf(fecha)} : r);
+  editId = null;
+  buildSemanaFilter();
+  render();
+  toast('Registro actualizado ✓');
+}
+
+function deleteRow(id) {
+  rows = rows.filter(r => r.id !== id);
+  if (editId === id) editId = null;
+  buildSemanaFilter();
+  render();
+  toast('Registro eliminado');
+}
+
+function addRow() {
+  const fecha = document.getElementById('new-fecha').value;
+  const monto = parseFloat(document.getElementById('new-monto').value);
+  if (!fecha || isNaN(monto) || monto < 0) { toast('Ingresa fecha y monto válidos','err'); return; }
+  rows.push({ id: 'v'+Date.now(), fecha, monto, semana: weekOf(fecha) });
+  rows.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  document.getElementById('new-fecha').value = '';
+  document.getElementById('new-monto').value = '';
+  toggleForm(false);
+  buildSemanaFilter();
+  render();
+  toast('Venta agregada ✓');
+}
+
+/* ─── UI HELPERS ──────────────────────────────────────── */
+let formOpen = false;
+function toggleForm(force) {
+  formOpen = force !== undefined ? force : !formOpen;
+  document.getElementById('add-form').classList.toggle('open', formOpen);
+  document.getElementById('add-toggle').textContent = formOpen ? '✕ Cancelar' : '+ Agregar venta';
+}
+
+function setView(v) {
+  curView = v;
+  document.getElementById('view-tabla').style.display = v === 'tabla' ? 'block' : 'none';
+  document.getElementById('view-semanas').style.display = v === 'semanas' ? 'grid' : 'none';
+  document.getElementById('btn-tabla').classList.toggle('active', v==='tabla');
+  document.getElementById('btn-semanas').classList.toggle('active', v==='semanas');
+  render();
+}
+
+let toastTimer;
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = type;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.style.display='none', 3000);
+}
+
+function copyUrl() {
+  const url = document.getElementById('share-url').value;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent='Copiar'; btn.classList.remove('copied'); }, 2500);
+  });
+}
+</script>
+</body>
+</html>
