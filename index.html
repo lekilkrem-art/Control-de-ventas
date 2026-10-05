@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Control de Ventas</title>
+    <!-- Configuración para App Web en iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --surface: #1e293b;
+            --surface-card: #243046;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-light: #1e3a8a;
+            --success: #10b981;
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.15);
+            --border: #334155;
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-top: env(safe-area-inset-top, 0px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            padding-top: calc(var(--safe-top) + 50px);
+            padding-bottom: calc(var(--safe-bottom) + 70px);
+            overflow-x: hidden;
+        }
+
+        /* Cabecera / Header */
+        header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: calc(var(--safe-top) + 50px);
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 0 20px 10px 20px;
+            z-index: 1000;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .brand-badge {
+            font-size: 11px;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        /* Contenedor de Vistas */
+        .view {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tarjetas de Métricas (KPIs) */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .card-full {
+            grid-column: span 2;
+        }
+
+        .kpi-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            color: var(--success);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Contenedores con desplazamiento hacia la izquierda */
+        .chart-scroll-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            gap: 10px;
+            padding-bottom: 5px;
+        }
+
+        .chart-scroll-item {
+            min-width: 100%;
+            scroll-snap-align: start;
+            flex-shrink: 0;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            margin-top: 10px;
+        }
+
+        .chart-swipe-horizontal {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chart-swipe-inner {
+            min-width: 600px;
+            height: 230px;
+        }
+
+        .scroll-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: -4px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .scroll-hint i {
+            animation: pulseLeft 1.5s infinite;
+        }
+
+        @keyframes pulseLeft {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-4px); }
+        }
+
+        /* Selector de periodo de semanas */
+        .period-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .period-btn {
+            flex: 1;
+            padding: 8px 0;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .period-btn.active {
+            background-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+
+        /* ================== ESTILOS CALENDARIO ================== */
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .cal-month-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-transform: capitalize;
+        }
+
+        .cal-nav-btn {
+            background-color: var(--surface-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .cal-nav-btn:active {
+            background-color: var(--primary);
+        }
+
+        .cal-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            background-color: rgba(15, 23, 42, 0.4);
+            border-radius: 10px;
+            padding: 8px 2px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .cal-weekdays span {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .cal-day-cell {
+            min-height: 58px;
+            padding: 4px 2px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            background: transparent;
+            border: 1px solid transparent;
+            position: relative;
+        }
+
+        .cal-day-cell.empty {
+            pointer-events: none;
+        }
+
+        .cal-day-number {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .cal-day-cell.today .cal-day-number {
+            background-color: var(--primary);
+            color: #ffffff;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cal-amount-box {
+            margin-top: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        .cal-amount-val {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #38bdf8;
+            line-height: 1.1;
+            letter-spacing: -0.2px;
+        }
+
+        .cal-amount-curr {
+            font-size: 8px;
+            font-weight: 500;
+            color: var(--text-muted);
+            line-height: 1;
+            margin-top: 1px;
+        }
+
+        .cal-day-cell.has-sales {
+            background-color: rgba(56, 189, 248, 0.08);
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        /* Formularios */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            background-color: var(--primary);
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transition: opacity 0.2s;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+        }
+
+        /* Lista Historial con botón Eliminar */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--surface);
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .history-info h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .history-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .history-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 15px;
+            transition: transform 0.1s;
+        }
+
+        .btn-action:active {
+            transform: scale(0.92);
+        }
+
+        .btn-edit {
+            background-color: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .btn-delete {
+            background-color: var(--danger-bg);
+            color: var(--danger);
+        }
+
+        /* Tablas */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+            background-color: var(--bg-primary);
+        }
+
+        /* Barra Inferior / Nav Bar */
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: calc(var(--safe-bottom) + 65px);
+            background-color: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding-top: 8px;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 500;
+            width: 60px;
+            cursor: pointer;
+        }
+
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 4px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item.nav-plus {
+            position: relative;
+            top: -15px;
+            width: 54px;
+            height: 54px;
+            background-color: var(--primary);
+            color: #ffffff !important;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            justify-content: center;
+        }
+
+        .nav-item.nav-plus i {
+            font-size: 22px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Control de Ventas</h1>
+        <span class="brand-badge"><i class="fas fa-moon"></i> Modo Oscuro</span>
+    </header>
+
+    <!-- 1. INICIO / DASHBOARD -->
+    <div id="view-inicio" class="view active">
+        <div class="kpi-grid">
+            <div class="card">
+                <div class="kpi-title">Venta de hoy</div>
+                <div class="kpi-value" id="kpi-hoy">$0.00</div>
+                <div class="kpi-sub"><i class="fas fa-trending-up"></i> Hoy</div>
+            </div>
+            <div class="card">
+                <div class="kpi-title">Total Semanal</div>
+                <div class="kpi-value" id="kpi-semana">$0.00</div>
+                <div class="kpi-sub"><i class="fas fa-calendar-week"></i> Esta sem.</div>
+            </div>
+            <div class="card card-full">
+                <div class="kpi-title">Total General</div>
+                <div class="kpi-value" id="kpi-total">$0.00</div>
+                <div class="kpi-sub" style="color: var(--primary);"><i class="fas fa-wallet"></i> Histórico total</div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="kpi-title">Ventas Diarias por Semana</div>
+                <div class="scroll-hint"><i class="fas fa-arrow-left"></i> Desliza a la izquierda</div>
+            </div>
+            <!-- Carrusel deslizable a la izquierda para ver semanas anteriores -->
+            <div class="chart-scroll-wrapper" id="dashboard-carousel">
+                <div class="chart-scroll-item">
+                    <div class="chart-container">
+                        <canvas id="chartSemanaActual"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="kpi-title">Mejor día de la semana actual</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                <span id="mejor-dia-nombre" style="font-weight: 600; font-size: 16px;">--</span>
+                <span id="mejor-dia-monto" style="font-weight: 700; font-size: 18px; color: var(--success);">$0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. HISTORIAL -->
+    <div id="view-historial" class="view">
+        <div class="card" style="margin-bottom: 16px; padding: 12px;">
+            <div class="kpi-title">Registros guardados (Modificar / Borrar)</div>
+        </div>
+        <div class="history-list" id="lista-historial">
+            <!-- Carga dinámica -->
+        </div>
+    </div>
+
+    <!-- 3. AGREGAR / EDITAR VENTA (CON ICONO +) -->
+    <div id="view-agregar" class="view">
+        <div class="card">
+            <div class="kpi-title" id="form-action-title">Nueva Venta</div>
+            <input type="hidden" id="edit-id">
+            
+            <div class="form-group">
+                <label for="venta-monto">Monto de la venta (MXN)</label>
+                <input type="number" id="venta-monto" class="form-control" placeholder="0.00" step="0.01" inputmode="decimal" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="venta-fecha">Fecha</label>
+                <input type="date" id="venta-fecha" class="form-control" required>
+            </div>
+
+            <button class="btn" onclick="guardarVenta()">Guardar Venta</button>
+            <button class="btn" id="btn-cancelar-edit" onclick="cancelarEdicion()" style="background: transparent; color: var(--text-muted); box-shadow: none; margin-top: 8px; display: none;">Cancelar Edición</button>
+        </div>
+    </div>
+
+    <!-- 4. GRÁFICAS -->
+    <div id="view-graficas" class="view">
+        <!-- Selector interactivo de semanas (hasta 12 semanas) -->
+        <div class="period-selector">
+            <button class="period-btn" onclick="seleccionarPeriodo(4)" id="btn-p4">4 Semanas</button>
+            <button class="period-btn" onclick="seleccionarPeriodo(8)" id="btn-p8">8 Semanas</button>
+            <button class="period-btn active" onclick="seleccionarPeriodo(12)" id="btn-p12">12 Semanas</button>
+        </div>
+
+        <div class="card" style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="kpi-title" id="titulo-grafica-semanas">Ventas Semanales Totales</div>
+                <div class="scroll-hint"><i class="fas fa-arrow-left"></i> Desliza a la izquierda</div>
+            </div>
+            <!-- Contenedor con swipe / scroll horizontal -->
+            <div class="chart-swipe-horizontal">
+                <div class="chart-swipe-inner" id="inner-chart-barras">
+                    <canvas id="chartSemanasTotales"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="kpi-title" id="titulo-grafica-lineas">Ventas Diarias: Comparativa de Semanas</div>
+                <div class="scroll-hint"><i class="fas fa-arrow-left"></i> Desliza a la izquierda</div>
+            </div>
+            <!-- Contenedor con swipe / scroll horizontal -->
+            <div class="chart-swipe-horizontal">
+                <div class="chart-swipe-inner" id="inner-chart-lineas">
+                    <canvas id="chartLineasSemanas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. REPORTES -->
+    <div id="view-reportes" class="view">
+        <!-- CALENDARIO DE VENTAS DIARIAS -->
+        <div class="card" style="margin-bottom: 16px;">
+            <div class="cal-header">
+                <button class="cal-nav-btn" onclick="cambiarMesCalendario(-1)"><i class="fas fa-chevron-left"></i></button>
+                <div class="cal-month-title" id="cal-titulo-mes">Octubre 2026</div>
+                <button class="cal-nav-btn" onclick="cambiarMesCalendario(1)"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            
+            <div class="cal-weekdays">
+                <span>Dom</span>
+                <span>Lun</span>
+                <span>Mar</span>
+                <span>Mié</span>
+                <span>Jue</span>
+                <span>Vie</span>
+                <span>Sáb</span>
+            </div>
+            
+            <div class="cal-grid" id="cal-dias-grid">
+                <!-- Se puebla dinámicamente con las fechas y los montos en MXN -->
+            </div>
+        </div>
+
+        <!-- TABLA COMPARATIVA DE SEMANAS -->
+        <div class="card">
+            <div class="kpi-title">Comparativa entre Semanas</div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Semana</th>
+                            <th>Rango de Fechas</th>
+                            <th>Total Vendido</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-reportes-body">
+                        <!-- Carga dinámica -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRA DE NAVEGACIÓN -->
+    <nav>
+        <div class="nav-item active" onclick="switchView('inicio', this)">
+            <i class="fas fa-chart-pie"></i>
+            <span>Inicio</span>
+        </div>
+        <div class="nav-item" onclick="switchView('historial', this)">
+            <i class="fas fa-history"></i>
+            <span>Historial</span>
+        </div>
+        <div class="nav-item nav-plus" onclick="switchView('agregar', this)">
+            <i class="fas fa-plus"></i>
+        </div>
+        <div class="nav-item" onclick="switchView('graficas', this)">
+            <i class="fas fa-chart-bar"></i>
+            <span>Gráficas</span>
+        </div>
+        <div class="nav-item" onclick="switchView('reportes', this)">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Reportes</span>
+        </div>
+    </nav>
+
+    <script>
+        const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const MESES_NOMBRES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        
+        // Paleta de 12 colores distintivos de alta visibilidad para hasta 12 semanas
+        const COLORES_12_SEMANAS = [
+            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+            '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', 
+            '#f97316', '#6366f1', '#14b8a6', '#eab308'
+        ];
+
+        let limiteSemanasGraficas = 12; // Por defecto visualiza hasta 12 semanas
+        
+        let ventas = JSON.parse(localStorage.getItem('ventas_db')) || [];
+        let carruselCharts = {}; 
+        let chartTotales, chartLineas;
+
+        // Estado del calendario mensual
+        let calCurrentYear = new Date().getFullYear();
+        let calCurrentMonth = new Date().getMonth(); // 0-11
+
+        const formatoMXN = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+        const formatoCalNumber = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const ahora = new Date();
+            const offset = ahora.getTimezoneOffset() * 60000;
+            const fechaLocal = new Date(ahora.getTime() - offset).toISOString().split('T')[0];
+            document.getElementById('venta-fecha').value = fechaLocal;
+
+            calCurrentYear = ahora.getFullYear();
+            calCurrentMonth = ahora.getMonth();
+
+            initChartsStatic();
+            actualizarTodo();
+        });
+
+        function seleccionarPeriodo(num) {
+            limiteSemanasGraficas = num;
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-p${num}`).classList.add('active');
+            
+            // Ajustar ancho del lienzo interno para que el desplazamiento horizontal sea espacioso
+            const innerBarras = document.getElementById('inner-chart-barras');
+            const innerLineas = document.getElementById('inner-chart-lineas');
+            if (num > 6) {
+                const anchoCalculado = Math.max(500, num * 55) + 'px';
+                innerBarras.style.minWidth = anchoCalculado;
+                innerLineas.style.minWidth = anchoCalculado;
+            } else {
+                innerBarras.style.minWidth = '100%';
+                innerLineas.style.minWidth = '100%';
+            }
+
+            actualizarTodo();
+        }
+
+        function switchView(viewId, element) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            if(element) {
+                element.classList.add('active');
+            } else {
+                const items = document.querySelectorAll('.nav-item');
+                if(viewId === 'inicio') items[0].classList.add('active');
+                if(viewId === 'historial') items[1].classList.add('active');
+                if(viewId === 'agregar') items[2].classList.add('active');
+                if(viewId === 'graficas') items[3].classList.add('active');
+                if(viewId === 'reportes') items[4].classList.add('active');
+            }
+
+            if(viewId === 'reportes') {
+                renderCalendario();
+            }
+
+            setTimeout(() => {
+                Object.values(carruselCharts).forEach(c => c.resize());
+                if(chartTotales) chartTotales.resize();
+                if(chartLineas) chartLineas.resize();
+            }, 50);
+        }
+
+        // Obtener la fecha del Domingo correspondiente a cualquier fecha (YYYY-MM-DD)
+        function getWeekSunday(dateString) {
+            const d = new Date(dateString + 'T12:00:00');
+            const day = d.getDay(); // 0 es Domingo
+            d.setDate(d.getDate() - day);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const dayOfMonth = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${dayOfMonth}`;
+        }
+
+        // Calcular número de semana empezando desde 1 a partir de la primera semana con datos
+        function getWeekNumber(sunStr, firstSunStr) {
+            const d1 = new Date(firstSunStr + 'T12:00:00');
+            const d2 = new Date(sunStr + 'T12:00:00');
+            const diffDays = Math.round((d2 - d1) / (24 * 60 * 60 * 1000));
+            return Math.floor(diffDays / 7) + 1;
+        }
+
+        // Obtener rango legible Domingo a Sábado
+        function getWeekRange(sunStr) {
+            const sun = new Date(sunStr + 'T12:00:00');
+            const sat = new Date(sun);
+            sat.setDate(sun.getDate() + 6);
+            const options = { day: '2-digit', month: 'short' };
+            return `${sun.toLocaleDateString('es-MX', options)} - ${sat.toLocaleDateString('es-MX', options)}`;
+        }
+
+        function cambiarMesCalendario(delta) {
+            calCurrentMonth += delta;
+            if(calCurrentMonth < 0) {
+                calCurrentMonth = 11;
+                calCurrentYear--;
+            } else if(calCurrentMonth > 11) {
+                calCurrentMonth = 0;
+                calCurrentYear++;
+            }
+            renderCalendario();
+        }
+
+        function renderCalendario() {
+            document.getElementById('cal-titulo-mes').innerText = `${MESES_NOMBRES[calCurrentMonth]} ${calCurrentYear}`;
+            const grid = document.getElementById('cal-dias-grid');
+            grid.innerHTML = '';
+
+            const hoy = new Date();
+            const offset = hoy.getTimezoneOffset() * 60000;
+            const hoyStr = new Date(hoy.getTime() - offset).toISOString().split('T')[0];
+
+            // Mapear ventas por fecha YYYY-MM-DD
+            const ventasPorFecha = {};
+            ventas.forEach(v => {
+                ventasPorFecha[v.fecha] = (ventasPorFecha[v.fecha] || 0) + parseFloat(v.monto || 0);
+            });
+
+            // Primer día del mes (0: Domingo, 1: Lunes, etc.)
+            const firstDay = new Date(calCurrentYear, calCurrentMonth, 1).getDay();
+            // Total días en el mes
+            const daysInMonth = new Date(calCurrentYear, calCurrentMonth + 1, 0).getDate();
+
+            // Celdas vacías antes del primer día
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'cal-day-cell empty';
+                grid.appendChild(emptyCell);
+            }
+
+            // Días del mes
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayStr = String(day).padStart(2, '0');
+                const monthStr = String(calCurrentMonth + 1).padStart(2, '0');
+                const fullDateStr = `${calCurrentYear}-${monthStr}-${dayStr}`;
+
+                const montoDia = ventasPorFecha[fullDateStr];
+                const esHoy = (fullDateStr === hoyStr);
+
+                const cell = document.createElement('div');
+                cell.className = `cal-day-cell ${esHoy ? 'today' : ''} ${montoDia > 0 ? 'has-sales' : ''}`;
+
+                let amountHtml = '';
+                if (montoDia > 0) {
+                    amountHtml = `
+                        <div class="cal-amount-box">
+                            <span class="cal-amount-val">$${formatoCalNumber.format(montoDia)}</span>
+                            <span class="cal-amount-curr">MXN</span>
+                        </div>
+                    `;
+                }
+
+                cell.innerHTML = `
+                    <span class="cal-day-number">${day}</span>
+                    ${amountHtml}
+                `;
+                grid.appendChild(cell);
+            }
+        }
+
+        function actualizarTodo() {
+            localStorage.setItem('ventas_db', JSON.stringify(ventas));
+            
+            const ahora = new Date();
+            const offset = ahora.getTimezoneOffset() * 60000;
+            const hoyStr = new Date(ahora.getTime() - offset).toISOString().split('T')[0];
+            const currentSundayStr = getWeekSunday(hoyStr);
+
+            // Determinar la primera semana que tiene datos registrados
+            let firstSundayStr = currentSundayStr;
+            if (ventas.length > 0) {
+                const fechasOrdenadas = ventas.map(v => v.fecha).sort();
+                firstSundayStr = getWeekSunday(fechasOrdenadas[0]);
+                if (currentSundayStr < firstSundayStr) {
+                    firstSundayStr = currentSundayStr;
+                }
+            }
+
+            // Venta de hoy
+            const ventaHoy = ventas
+                .filter(v => v.fecha === hoyStr)
+                .reduce((sum, v) => sum + parseFloat(v.monto || 0), 0);
+            document.getElementById('kpi-hoy').innerText = formatoMXN.format(ventaHoy);
+
+            // Total Semanal (Ventas de la semana en curso)
+            const ventaSemana = ventas
+                .filter(v => getWeekSunday(v.fecha) === currentSundayStr)
+                .reduce((sum, v) => sum + parseFloat(v.monto || 0), 0);
+            document.getElementById('kpi-semana').innerText = formatoMXN.format(ventaSemana);
+
+            // Total General
+            const ventaTotal = ventas.reduce((sum, v) => sum + parseFloat(v.monto || 0), 0);
+            document.getElementById('kpi-total').innerText = formatoMXN.format(ventaTotal);
+
+            // Agrupación de ventas por domingo de inicio de semana
+            let semanasMap = {};
+            ventas.forEach(v => {
+                const sunStr = getWeekSunday(v.fecha);
+                if(!semanasMap[sunStr]) {
+                    semanasMap[sunStr] = {
+                        sunday: sunStr,
+                        total: 0,
+                        dias: new Array(7).fill(0)
+                    };
+                }
+                semanasMap[sunStr].total += parseFloat(v.monto || 0);
+                const dIdx = new Date(v.fecha + 'T12:00:00').getDay();
+                semanasMap[sunStr].dias[dIdx] += parseFloat(v.monto || 0);
+            });
+
+            // Asegurar que la semana actual siempre esté presente en la lista
+            if (!semanasMap[currentSundayStr]) {
+                semanasMap[currentSundayStr] = {
+                    sunday: currentSundayStr,
+                    total: 0,
+                    dias: new Array(7).fill(0)
+                };
+            }
+
+            // Ordenar semanas cronológicamente y asignar número comenzando desde Semana 1
+            const listaSemanas = Object.values(semanasMap).sort((a,b) => a.sunday.localeCompare(b.sunday));
+            listaSemanas.forEach(s => {
+                s.weekNum = getWeekNumber(s.sunday, firstSundayStr);
+                s.rango = getWeekRange(s.sunday);
+            });
+
+            // CARRUSEL DASHBOARD: Semana actual primero, deslizar a la izquierda para ver semanas anteriores
+            Object.values(carruselCharts).forEach(c => c.destroy());
+            carruselCharts = {};
+            
+            const carouselWrapper = document.getElementById('dashboard-carousel');
+            carouselWrapper.innerHTML = ''; 
+
+            const semanasParaCarrusel = [...listaSemanas].reverse();
+
+            semanasParaCarrusel.forEach((sem, idx) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'chart-scroll-item';
+                
+                const esActual = sem.sunday === currentSundayStr;
+                const tituloSemana = `Semana ${sem.weekNum} ${esActual ? ' - Actual' : ''} (${sem.rango})`;
+                
+                itemDiv.innerHTML = `
+                    <div style="font-size: 13px; font-weight:600; color:var(--text-muted); margin-bottom:2px; text-align:center;">
+                        ${tituloSemana}
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="canvas-carousel-${sem.sunday}"></canvas>
+                    </div>
+                `;
+                carouselWrapper.appendChild(itemDiv);
+
+                const ctxScroll = document.getElementById(`canvas-carousel-${sem.sunday}`).getContext('2d');
+                carruselCharts[sem.sunday] = new Chart(ctxScroll, {
+                    type: 'bar',
+                    data: {
+                        labels: DIAS_SEMANA.map(d => d.substring(0,3)),
+                        datasets: [{
+                            data: sem.dias,
+                            backgroundColor: esActual ? '#3b82f6' : '#64748b',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            });
+
+            // Mejor día de la semana actual
+            const datosSemanaActual = semanasMap[currentSundayStr];
+            if(datosSemanaActual) {
+                let maxMonto = -1, mejorDiaIdx = -1;
+                datosSemanaActual.dias.forEach((m, idx) => {
+                    if(m > maxMonto && m > 0) {
+                        maxMonto = m;
+                        mejorDiaIdx = idx;
+                    }
+                });
+                if(mejorDiaIdx !== -1) {
+                    document.getElementById('mejor-dia-nombre').innerText = DIAS_SEMANA[mejorDiaIdx];
+                    document.getElementById('mejor-dia-monto').innerText = formatoMXN.format(maxMonto);
+                } else {
+                    document.getElementById('mejor-dia-nombre').innerText = "--";
+                    document.getElementById('mejor-dia-monto').innerText = formatoMXN.format(0);
+                }
+            } else {
+                document.getElementById('mejor-dia-nombre').innerText = "--";
+                document.getElementById('mejor-dia-monto').innerText = formatoMXN.format(0);
+            }
+
+            // --- SECCIÓN GRÁFICAS: HASTA 12 SEMANAS CONFIGURABLES ---
+            const semanasFiltradas = listaSemanas.slice(-limiteSemanasGraficas);
+            
+            document.getElementById('titulo-grafica-semanas').innerText = `Ventas Semanales Totales (${semanasFiltradas.length} Semanas)`;
+            document.getElementById('titulo-grafica-lineas').innerText = `Ventas Diarias: Comparativa (${semanasFiltradas.length} Semanas)`;
+
+            // Gráfica de barras de semanas totales
+            chartTotales.data.labels = semanasFiltradas.map(s => `Semana ${s.weekNum}`);
+            chartTotales.data.datasets[0].data = semanasFiltradas.map(s => s.total);
+            chartTotales.update();
+
+            // Gráfica de líneas comparativa (hasta 12 semanas con paleta de colores extendida)
+            const semanasFiltradasInversas = [...semanasFiltradas].reverse();
+            chartLineas.data.datasets = semanasFiltradasInversas.map((s, index) => {
+                const color = COLORES_12_SEMANAS[index % COLORES_12_SEMANAS.length];
+                return {
+                    label: `Semana ${s.weekNum}`,
+                    data: s.dias,
+                    borderColor: color,
+                    backgroundColor: 'transparent',
+                    borderWidth: 2.5,
+                    tension: 0.3,
+                    pointRadius: 3.5,
+                    pointBackgroundColor: color
+                };
+            });
+            chartLineas.update();
+
+            // Renderizar Historial con opción de Modificar y Borrar
+            const listaHistorial = document.getElementById('lista-historial');
+            listaHistorial.innerHTML = '';
+            const ventasOrdenadas = [...ventas].sort((a,b) => b.fecha.localeCompare(a.fecha));
+            
+            if(ventasOrdenadas.length === 0) {
+                listaHistorial.innerHTML = `
+                    <div style="text-align: center; color: var(--text-muted); padding: 30px 10px;">
+                        <i class="fas fa-inbox" style="font-size: 32px; margin-bottom: 8px;"></i>
+                        <p>No hay registros de ventas guardados.</p>
+                    </div>
+                `;
+            } else {
+                ventasOrdenadas.forEach(v => {
+                    const fObj = new Date(v.fecha + 'T12:00:00');
+                    const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                    const fechaLegible = fObj.toLocaleDateString('es-MX', opciones);
+
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.innerHTML = `
+                        <div class="history-info">
+                            <h4>${formatoMXN.format(v.monto)}</h4>
+                            <p>${fechaLegible}</p>
+                        </div>
+                        <div class="history-actions">
+                            <button class="btn-action btn-edit" onclick="prepararEdicion('${v.id}')" title="Modificar">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button class="btn-action btn-delete" onclick="eliminarVenta('${v.id}')" title="Eliminar">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    listaHistorial.appendChild(item);
+                });
+            }
+
+            // Reportes: Renderizar el Calendario del Mes
+            renderCalendario();
+
+            // Reportes: Tabla comparativa comenzando por Semana 1
+            const tbody = document.getElementById('tabla-reportes-body');
+            tbody.innerHTML = '';
+            [...listaSemanas].reverse().forEach(s => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td style="font-weight: 600;">Semana ${s.weekNum}</td>
+                    <td style="color: var(--text-muted);">${s.rango}</td>
+                    <td style="font-weight: 700; text-align: right; color: var(--primary);">${formatoMXN.format(s.total)}</td>
+                `;
+                tbody.appendChild(fila);
+            });
+        }
+
+        function initChartsStatic() {
+            const ctxTotales = document.getElementById('chartSemanasTotales').getContext('2d');
+            chartTotales = new Chart(ctxTotales, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Total Vendido',
+                        data: [],
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } }
+                    }
+                }
+            });
+
+            const ctxLineas = document.getElementById('chartLineasSemanas').getContext('2d');
+            chartLineas = new Chart(ctxLineas, {
+                type: 'line',
+                data: {
+                    labels: DIAS_SEMANA,
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            display: true, 
+                            position: 'top',
+                            labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 }, padding: 8 } 
+                        } 
+                    },
+                    scales: {
+                        y: { 
+                            title: { display: true, text: 'Cantidad ($)', color: '#94a3b8', font: { weight: 'bold', size: 11 } },
+                            grid: { color: '#334155' }, 
+                            ticks: { color: '#94a3b8' } 
+                        },
+                        x: { 
+                            title: { display: true, text: 'Días', color: '#94a3b8', font: { weight: 'bold', size: 11 } },
+                            grid: { display: false }, 
+                            ticks: { color: '#94a3b8' } 
+                        }
+                    }
+                }
+            });
+        }
+
+        function guardarVenta() {
+            const montoInput = document.getElementById('venta-monto');
+            const fechaInput = document.getElementById('venta-fecha');
+            const editId = document.getElementById('edit-id').value;
+
+            const monto = parseFloat(montoInput.value);
+            const fecha = fechaInput.value;
+
+            if(!monto || !fecha) {
+                alert('Introduce un monto válido y selecciona una fecha.');
+                return;
+            }
+
+            if(editId) {
+                const idx = ventas.findIndex(v => v.id === editId);
+                if(idx !== -1) {
+                    ventas[idx].monto = monto;
+                    ventas[idx].fecha = fecha;
+                }
+                cancelarEdicion();
+            } else {
+                const nuevaVenta = {
+                    id: 'v-' + Date.now() + Math.random().toString(36).substr(2, 4),
+                    monto: monto,
+                    fecha: fecha
+                };
+                ventas.push(nuevaVenta);
+            }
+
+            actualizarTodo();
+            montoInput.value = '';
+            
+            const ahora = new Date();
+            const offset = ahora.getTimezoneOffset() * 60000;
+            fechaInput.value = new Date(ahora.getTime() - offset).toISOString().split('T')[0];
+            
+            switchView('inicio');
+        }
+
+        function prepararEdicion(id) {
+            const venta = ventas.find(v => v.id === id);
+            if(!venta) return;
+
+            document.getElementById('edit-id').value = venta.id;
+            document.getElementById('venta-monto').value = venta.monto;
+            document.getElementById('venta-fecha').value = venta.fecha;
+            
+            document.getElementById('form-action-title').innerText = "Modificar Registro";
+            document.getElementById('btn-cancelar-edit').style.display = "block";
+
+            switchView('agregar');
+        }
+
+        function cancelarEdicion() {
+            document.getElementById('edit-id').value = "";
+            document.getElementById('venta-monto').value = "";
+            const ahora = new Date();
+            const offset = ahora.getTimezoneOffset() * 60000;
+            document.getElementById('venta-fecha').value = new Date(ahora.getTime() - offset).toISOString().split('T')[0];
+            document.getElementById('form-action-title').innerText = "Nueva Venta";
+            document.getElementById('btn-cancelar-edit').style.display = "none";
+            switchView('historial');
+        }
+
+        function eliminarVenta(id) {
+            const venta = ventas.find(v => v.id === id);
+            if(!venta) return;
+
+            const fObj = new Date(venta.fecha + 'T12:00:00');
+            const fechaLegible = fObj.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+            
+            const confirmar = confirm(`¿Estás seguro de que deseas borrar este registro?\n\nMonto: ${formatoMXN.format(venta.monto)}\nFecha: ${fechaLegible}`);
+            if(!confirmar) return;
+
+            ventas = ventas.filter(v => v.id !== id);
+            actualizarTodo();
+        }
+    </script>
+</body>
+</html>
